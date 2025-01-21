@@ -28,6 +28,7 @@ async function run() {
   const tourCollection = client.db('travelDB')
   const packages = tourCollection.collection('packages')
   const guides = tourCollection.collection('guides')
+  const bookings = tourCollection.collection('bookings')
 
   // Packages API
   app.get('/packages-home', async (req, res) => {
@@ -50,7 +51,7 @@ async function run() {
   })
 
   // Guides API
-  app.get('/guides', async(req, res)=>{
+  app.get('/guides', async (req, res) => {
    const cursor = guides.find()
    const result = await cursor.toArray()
    res.send(result)
@@ -59,6 +60,19 @@ async function run() {
   app.get('/guides-home', async (req, res) => {
    const cursor = guides.aggregate([{ $sample: { size: 6 } }])
    const result = await cursor.toArray()
+   res.send(result)
+  })
+  app.get('/guides/:id', async (req, res) => {
+   const id = req.params.id
+   const guide = { _id: new ObjectId(id) }
+   const result = await guides.findOne(guide)
+   res.send(result)
+  })
+
+  // Bookings API
+  app.post('/bookings', async (req, res) => {
+   const booking = req.body
+   const result = await bookings.insertOne(booking)
    res.send(result)
   })
   // Send a ping to confirm a successful connection
