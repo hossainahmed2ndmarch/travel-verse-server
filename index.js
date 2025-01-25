@@ -29,6 +29,7 @@ async function run() {
   const packages = tourCollection.collection('packages')
   const guides = tourCollection.collection('guides')
   const bookings = tourCollection.collection('bookings')
+  const users = tourCollection.collection('users')
 
   // Packages API
   app.get('/packages-home', async (req, res) => {
@@ -80,6 +81,38 @@ async function run() {
    const email = req.query.email
    const query = { touristEmail: email }
    const result = await bookings.find(query).toArray()
+   res.send(result)
+  })
+
+  app.delete('/bookings/:id', async (req, res) => {
+   const id = req.params.id
+   const query = { _id: new ObjectId(id) }
+   const result = await bookings.deleteOne(query)
+   res.send(result)
+  })
+
+  // Users API
+  app.post('/users', async (req, res) => {
+   const user = req.body
+   const query = { email: user.email }
+   const existingUser = await users.findOne(query)
+   if (existingUser) {
+    return res.send({ message: 'user already exist', insertedId: null })
+   }
+   const result = await users.insertOne(user)
+   res.send(result)
+  })
+
+  app.get('/users', async (req, res) => {
+   const cursor = users.find()
+   const result = await cursor.toArray()
+   res.send(result)
+  })
+
+  app.delete('/users/:id', async (req, res) => {
+   const id = req.params.id
+   const query = { _id: new ObjectId(id) }
+   const result = await users.deleteOne(query)
    res.send(result)
   })
   // Send a ping to confirm a successful connection
