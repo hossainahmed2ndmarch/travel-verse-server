@@ -31,6 +31,8 @@ async function run() {
   const guides = tourCollection.collection('guides')
   const bookings = tourCollection.collection('bookings')
   const users = tourCollection.collection('users')
+  const stories = tourCollection.collection('stories')
+
 
 
   // Middlewares
@@ -141,6 +143,14 @@ async function run() {
    const id = req.params.id
    const query = { _id: new ObjectId(id) }
    const result = await bookings.deleteOne(query)
+   res.send(result)
+  })
+
+
+  // Stories API
+  app.post('/stories', async (req, res) => {
+   const story = req.body
+   const result = await stories.insertOne(story)
    res.send(result)
   })
 
