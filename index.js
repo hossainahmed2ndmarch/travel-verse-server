@@ -190,7 +190,7 @@ async function run() {
    res.send({ guide });
   })
 
-  app.get('/users/:email',  async (req, res) => {
+  app.get('/users/:email', async (req, res) => {
    const email = req.params.email
    const query = { email: email }
    const result = await users.findOne(query)
@@ -225,6 +225,20 @@ async function run() {
     }
    }
    const result = await users.updateOne(filter, updatedDoc)
+   res.send(result)
+  })
+
+  app.patch('/users/:id', verifyToken, async (req, res) => {
+   const id = req.params.id
+   const updatedProfileData = req.body;
+   const filter = { _id: new ObjectId(id) }
+   const update = {
+    $set: {
+     name: updatedProfileData.name,
+     photo: updatedProfileData.photo
+    }
+   };
+   const result = await users.updateOne(filter, update);
    res.send(result)
   })
   app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
