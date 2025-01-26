@@ -62,7 +62,17 @@ async function run() {
    next();
   }
 
-
+  // use verify admin after verifyToken
+  const verifyGuide = async (req, res, next) => {
+   const email = req.decoded.email;
+   const query = { email: email };
+   const user = await users.findOne(query);
+   const isGuide = user?.role === 'guide';
+   if (!isGuide) {
+    return res.status(403).send({ message: 'forbidden access' });
+   }
+   next();
+  }
 
   // JWT API
   app.post('/jwt', async (req, res) => {
@@ -146,8 +156,8 @@ async function run() {
    res.send(result)
   })
 
-
-  app.get('/users/admin/:email', verifyToken, verifyAdmin, async (req, res) => {
+  // Get Admin
+  app.get('/users/admin/:email', verifyToken, async (req, res) => {
    const email = req.params.email;
 
    if (email !== req.decoded.email) {
@@ -162,15 +172,38 @@ async function run() {
    }
    res.send({ admin });
   })
+  // Get Guide
 
-  app.get('/users', verifyToken, async (req, res) => {
+  app.get('/users/guide/:email', verifyToken, async (req, res) => {
+   const email = req.params.email;
+
+   if (email !== req.decoded.email) {
+    return res.status(403).send({ message: 'forbidden access' })
+   }
+
+   const query = { email: email };
+   const user = await users.findOne(query);
+   let guide = false;
+   if (user) {
+    guide = user?.role === 'guide';
+   }
+   res.send({ guide });
+  })
+
+  app.get('/users/:email',  async (req, res) => {
+   const email = req.params.email
+   const query = { email: email }
+   const result = await users.findOne(query)
+   res.send(result)
+  })
+  app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
    const cursor = users.find()
    // console.log(req.headers);
    const result = await cursor.toArray()
    res.send(result)
   })
-
-  app.patch('/users/admin/:id', async (req, res) => {
+  // Make admin
+  app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
    const id = req.params.id
    const filter = { _id: new ObjectId(id) }
    const updatedDoc = {
@@ -181,7 +214,20 @@ async function run() {
    const result = await users.updateOne(filter, updatedDoc)
    res.send(result)
   })
-  app.delete('/users/:id', async (req, res) => {
+
+  // Make guide
+  app.patch('/users/guide/:id', verifyToken, verifyAdmin, async (req, res) => {
+   const id = req.params.id
+   const filter = { _id: new ObjectId(id) }
+   const updatedDoc = {
+    $set: {
+     role: 'guide'
+    }
+   }
+   const result = await users.updateOne(filter, updatedDoc)
+   res.send(result)
+  })
+  app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
    const id = req.params.id
    const query = { _id: new ObjectId(id) }
    const result = await users.deleteOne(query)
