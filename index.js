@@ -154,6 +154,26 @@ async function run() {
    res.send(result)
   })
 
+
+  app.get('/stories-home', async (req, res) => {
+   const cursor = stories.aggregate([{ $sample: { size: 4 } }])
+   const result = await cursor.toArray()
+   res.send(result)
+  })
+
+  app.get('/stories', async (req, res) => {
+   const cursor = stories.find()
+   const result = await cursor.toArray()
+   res.send(result)
+  })
+
+
+  app.get('/stories/:email', async (req, res) => {
+   const email = req.params.email
+   const query = { storyTeller: email }
+   const result = await stories.find(query).toArray()
+   res.send(result)
+  })
   // Users API
   app.post('/users', async (req, res) => {
    const user = req.body
