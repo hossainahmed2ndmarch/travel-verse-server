@@ -171,6 +171,24 @@ async function run() {
    const result = await bookings.find(query).toArray()
    res.send(result)
   })
+  app.get('/bookings/assigned', async (req, res) => {
+   const email = req.query.email
+   const query = { guideEmail: email }
+   const result = await bookings.find(query).toArray()
+   res.send(result)
+  })
+  app.patch('/bookings/assigned/:id', async (req, res) => {
+   const id = req.params.id
+   const { action } = req.body;
+   const filter = { _id: new ObjectId(id) }
+   const updatedDoc = {
+    $set: {
+     status: action === 'accept' ? 'Accepted' : action === 'reject' ? 'Rejected' : null,
+    },
+   };
+   const result = await bookings.updateOne(filter, updatedDoc);
+   res.send(result)
+  })
 
   app.delete('/bookings/:id', async (req, res) => {
    const id = req.params.id
