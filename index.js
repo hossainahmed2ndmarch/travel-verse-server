@@ -3,6 +3,7 @@ const cors = require('cors');
 const app = express()
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 5000
 
@@ -32,6 +33,7 @@ async function run() {
   const bookings = tourCollection.collection('bookings')
   const users = tourCollection.collection('users')
   const stories = tourCollection.collection('stories')
+  const payments = tourCollection.collection('payments')
 
 
 
@@ -105,7 +107,37 @@ async function run() {
    const result = await packages.findOne(package)
    res.send(result)
   })
+  // Payments API
+  // payment intent
+  app.post('/create-payment-intent', async (req, res) => {
+   const { price } = req.body;
+   const amount = parseInt(price * 100);
+   console.log(amount, 'amount inside the intent')
 
+   const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount,
+    currency: 'usd',
+    payment_method_types: ['card']
+   });
+
+   res.send({
+    clientSecret: paymentIntent.client_secret
+   })
+  });
+
+  app.post('/payments', async (req, res) => {
+   const payment = req.body
+   const id = payment.bookingId
+   const query = { _id: new ObjectId(id) }
+   const updatedDoc = {
+    $set: {
+     status: 'in-review'
+    }
+   }
+   const paymentResult = await payments.insertOne(payment)
+   const updateResult = await bookings.updateOne(query, updatedDoc)
+   res.send({ paymentResult, updateResult })
+  })
   // Guides API
   app.get('/guides', async (req, res) => {
    const cursor = guides.find()
@@ -168,12 +200,40 @@ async function run() {
   })
 
 
-  app.get('/stories/:email', async (req, res) => {
+  app.get('/stories/:email', verifyToken, async (req, res) => {
    const email = req.params.email
    const query = { storyTeller: email }
    const result = await stories.find(query).toArray()
    res.send(result)
   })
+
+  app.patch('/stories/:id', verifyToken, async (req, res) => {
+   const id = req.params.id;
+   const { pullImage, pushImage } = req.body;
+   const filter = { _id: new ObjectId(id) };
+   try {
+    // Initialize the update object
+    const update = {};
+
+    // Check if images to remove are provided
+    if (pullImage) {
+     update.$pull = { images: pullImage }; // Add $pull operation to the update object
+    }
+
+    // Check if images to add are provided
+    if (pushImage) {
+     update.$push = { images: pushImage }; // Add $push operation to the update object
+    }
+
+    // Perform the update
+    const result = await stories.updateOne(filter, update);
+    res.send({ success: true, result });
+   } catch (error) {
+    console.error("Error updating story:", error);
+    res.status(500).send({ success: false, message: "Failed to update story." });
+   }
+  });
+
 
   app.delete('/stories/:id', verifyToken, async (req, res) => {
    const id = req.params.id
