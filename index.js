@@ -140,6 +140,11 @@ async function run() {
    res.send({ paymentResult, updateResult })
   })
   // Guides API
+  app.post('/guides', async (req, res) => {
+   const guideData = req.body
+   const result = await guides.insertOne(guideData)
+   res.send(result)
+  })
   app.get('/guides', async (req, res) => {
    const cursor = guides.find()
    const result = await cursor.toArray()
@@ -207,6 +212,19 @@ async function run() {
   app.post("/applications", async (req, res) => {
    const application = req.body
    const result = await applications.insertOne(application)
+   res.send(result)
+  })
+
+  app.get('/applications', async (req, res) => {
+   const cursor = applications.find()
+   const result = await cursor.toArray()
+   res.send(result)
+  })
+
+  app.delete('/applications/:id', async (req, res) => {
+   const id = req.params.id
+   const query = { _id: new ObjectId(id) }
+   const result = await applications.deleteOne(query)
    res.send(result)
   })
   // Stories API
@@ -343,15 +361,15 @@ async function run() {
   })
 
   // Make guide
-  app.patch('/users/guide/:id', verifyToken, verifyAdmin, async (req, res) => {
-   const id = req.params.id
-   const filter = { _id: new ObjectId(id) }
+  app.patch('/users/guide/:email', verifyToken, verifyAdmin, async (req, res) => {
+   const email = req.params.email
+   const query = { email: email }
    const updatedDoc = {
     $set: {
      role: 'guide'
     }
    }
-   const result = await users.updateOne(filter, updatedDoc)
+   const result = await users.updateOne(query, updatedDoc)
    res.send(result)
   })
 
