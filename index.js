@@ -174,6 +174,13 @@ async function run() {
    const result = await stories.find(query).toArray()
    res.send(result)
   })
+
+  app.delete('/stories/:id', verifyToken, async (req, res) => {
+   const id = req.params.id
+   const query = { _id: new ObjectId(id) }
+   const result = await stories.deleteOne(query)
+   res.send(result)
+  })
   // Users API
   app.post('/users', async (req, res) => {
    const user = req.body
