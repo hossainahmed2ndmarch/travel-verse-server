@@ -34,6 +34,7 @@ async function run() {
   const users = tourCollection.collection('users')
   const stories = tourCollection.collection('stories')
   const payments = tourCollection.collection('payments')
+  const applications = tourCollection.collection('applications')
 
 
 
@@ -178,7 +179,12 @@ async function run() {
    res.send(result)
   })
 
-
+  // Applications API
+  app.post("/applications", async (req, res) => {
+   const application = req.body
+   const result = await applications.insertOne(application)
+   res.send(result)
+  })
   // Stories API
   app.post('/stories', async (req, res) => {
    const story = req.body
