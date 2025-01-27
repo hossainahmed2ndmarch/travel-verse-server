@@ -342,11 +342,36 @@ async function run() {
    res.send(result)
   })
   app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
-   const cursor = users.find()
-   // console.log(req.headers);
-   const result = await cursor.toArray()
-   res.send(result)
-  })
+   const { search, role, page = 1, limit = 10 } = req.query;
+
+   // Create query object for search and filtering
+   const query = {};
+   if (search) {
+    query.$or = [
+     { name: { $regex: search, $options: "i" } }, // Case-insensitive regex search
+     { email: { $regex: search, $options: "i" } },
+    ];
+   }
+   if (role) {
+    query.role = role;
+   }
+
+   const skip = (parseInt(page) - 1) * parseInt(limit); // Calculate offset
+
+   // Count total users for pagination metadata
+   const totalUsers = await users.countDocuments(query);
+
+   // Fetch users with pagination
+   const result = await users.find(query).skip(skip).limit(parseInt(limit)).toArray();
+
+   res.send({
+    totalUsers,
+    totalPages: Math.ceil(totalUsers / limit),
+    currentPage: parseInt(page),
+    users: result,
+   });
+  });
+
   // Make admin
   app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
    const id = req.params.id
