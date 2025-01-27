@@ -190,10 +190,16 @@ async function run() {
    res.send(result)
   })
 
-  app.delete('/bookings/:id', async (req, res) => {
+  app.patch('/bookings/:id', async (req, res) => {
    const id = req.params.id
    const query = { _id: new ObjectId(id) }
-   const result = await bookings.deleteOne(query)
+   const updateDoc = {
+    $unset: {
+     tripTitle: "", // Remove the 'tripTitle' field
+     touristName: "" // Remove the 'touristName' field
+    }
+   };
+   const result = await bookings.updateOne(query, updateDoc)
    res.send(result)
   })
 
@@ -348,6 +354,50 @@ async function run() {
    const result = await users.updateOne(filter, updatedDoc)
    res.send(result)
   })
+
+  app.get('/admin-stats', async (req, res) => {
+   try {
+    const usersCount = await users.estimatedDocumentCount();
+    const packagesCount = await packages.estimatedDocumentCount();
+    const guidesCount = await guides.estimatedDocumentCount();
+    const bookingsCount = await bookings.estimatedDocumentCount();
+    const storiesCount = await stories.estimatedDocumentCount();
+    const applicationsCount = await applications.estimatedDocumentCount();
+
+    // Ensure the `price` field exists in the payments collection
+    const result = await payments.aggregate([
+     {
+      $addFields: {
+       numericPrice: { $toDouble: "$price" }, // Converts `price` to a number
+      },
+     },
+     {
+      $group: {
+       _id: null,
+       totalRevenue: {
+        $sum: { $ifNull: ["$numericPrice", 0] }, // Aggregate numeric values
+       },
+      },
+     },
+    ]).toArray();
+
+    const totalRevenue = result.length > 0 ? result[0].totalRevenue : 0;
+
+    res.send({
+     users: usersCount,
+     packages: packagesCount,
+     guides: guidesCount,
+     bookings: bookingsCount,
+     stories: storiesCount,
+     applications: applicationsCount,
+     revenue: totalRevenue,
+    });
+   } catch (error) {
+    console.error("Error in /admin-stats API:", error);
+    res.status(500).send({ message: "An error occurred while fetching stats", error });
+   }
+  });
+
 
   app.patch('/users/:id', verifyToken, async (req, res) => {
    const id = req.params.id
