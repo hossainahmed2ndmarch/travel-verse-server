@@ -67,7 +67,7 @@ async function run() {
    next();
   }
 
-  // use verify admin after verifyToken
+  // use verify guide after verifyToken
   const verifyGuide = async (req, res, next) => {
    const email = req.decoded.email;
    const query = { email: email };
@@ -134,7 +134,7 @@ async function run() {
    })
   });
 
-  app.post('/payments', async (req, res) => {
+  app.post('/payments', verifyToken, async (req, res) => {
    const payment = req.body
    const id = payment.bookingId
    const query = { _id: new ObjectId(id) }
@@ -175,25 +175,25 @@ async function run() {
   })
 
   // Bookings API
-  app.post('/bookings', async (req, res) => {
+  app.post('/bookings', verifyToken, async (req, res) => {
    const booking = req.body
    const result = await bookings.insertOne(booking)
    res.send(result)
   })
 
-  app.get('/bookings', async (req, res) => {
+  app.get('/bookings', verifyToken, async (req, res) => {
    const email = req.query.email
    const query = { touristEmail: email }
    const result = await bookings.find(query).toArray()
    res.send(result)
   })
-  app.get('/bookings/assigned', async (req, res) => {
+  app.get('/bookings/assigned', verifyToken, verifyGuide, async (req, res) => {
    const email = req.query.email
    const query = { guideEmail: email }
    const result = await bookings.find(query).toArray()
    res.send(result)
   })
-  app.patch('/bookings/assigned/:id', async (req, res) => {
+  app.patch('/bookings/assigned/:id', verifyToken, verifyGuide, async (req, res) => {
    const id = req.params.id
    const { action } = req.body;
    const filter = { _id: new ObjectId(id) }
@@ -206,7 +206,7 @@ async function run() {
    res.send(result)
   })
 
-  app.patch('/bookings/:id', async (req, res) => {
+  app.patch('/bookings/:id', verifyToken, async (req, res) => {
    const id = req.params.id
    const query = { _id: new ObjectId(id) }
    const updateDoc = {
@@ -220,7 +220,7 @@ async function run() {
   })
 
   // Applications API
-  app.post("/applications", async (req, res) => {
+  app.post("/applications", verifyToken, async (req, res) => {
    const application = req.body
    const result = await applications.insertOne(application)
    res.send(result)
@@ -239,7 +239,7 @@ async function run() {
    res.send(result)
   })
   // Stories API
-  app.post('/stories', async (req, res) => {
+  app.post('/stories', verifyToken, async (req, res) => {
    const story = req.body
    const result = await stories.insertOne(story)
    res.send(result)
@@ -346,7 +346,7 @@ async function run() {
    res.send({ guide });
   })
 
-  app.get('/users/:email', async (req, res) => {
+  app.get('/users/:email', verifyToken, async (req, res) => {
    const email = req.params.email
    const query = { email: email }
    const result = await users.findOne(query)
