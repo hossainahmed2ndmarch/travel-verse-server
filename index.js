@@ -26,7 +26,7 @@ const client = new MongoClient(uri, {
 async function run() {
  try {
   // Connect the client to the server	(optional starting in v4.7)
-  await client.connect();
+  // await client.connect();
   const tourCollection = client.db('travelDB')
   const packages = tourCollection.collection('packages')
   const guides = tourCollection.collection('guides')
@@ -40,7 +40,7 @@ async function run() {
 
   // Middlewares
   const verifyToken = (req, res, next) => {
-   console.log(req.headers);
+   // console.log(req.headers);
    if (!req.headers.authorization) {
     return res.status(401).send({ message: 'unauthorized access' })
    }
@@ -82,7 +82,7 @@ async function run() {
   // JWT API
   app.post('/jwt', async (req, res) => {
    const user = req.body
-   console.log("User Info Received:", user);
+   // console.log("User Info Received:", user);
    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: '1h'
    })
@@ -90,12 +90,7 @@ async function run() {
   })
 
   // Packages API
-  app.post('/packages', async (req, res) => {
-   const package = req.body
-   console.log(package);
-   const result = await packages.insertOne(package)
-   res.send(result)
-  })
+
   app.get('/packages-home', async (req, res) => {
    const cursor = packages.aggregate([{ $sample: { size: 3 } }])
    const result = await cursor.toArray()
@@ -114,12 +109,19 @@ async function run() {
    const result = await packages.findOne(package)
    res.send(result)
   })
+
+  app.post('/packages', verifyToken, verifyAdmin, async (req, res) => {
+   const package = req.body
+   // console.log(package);
+   const result = await packages.insertOne(package)
+   res.send(result)
+  })
   // Payments API
   // payment intent
   app.post('/create-payment-intent', async (req, res) => {
    const { price } = req.body;
    const amount = parseInt(price * 100);
-   console.log(amount, 'amount inside the intent')
+   // console.log(amount, 'amount inside the intent')
 
    const paymentIntent = await stripe.paymentIntents.create({
     amount: amount,
@@ -146,10 +148,13 @@ async function run() {
    res.send({ paymentResult, updateResult })
   })
   // Guides API
-  app.post('/guides', async (req, res) => {
+  app.post('/guides', verifyToken, verifyAdmin, async (req, res) => {
    const guideData = req.body
+   const email = guideData.email
+   const query = { email: email }
+   const deleteResult = await applications.deleteOne(query)
    const result = await guides.insertOne(guideData)
-   res.send(result)
+   res.send({ result, deleteResult })
   })
   app.get('/guides', async (req, res) => {
    const cursor = guides.find()
@@ -221,13 +226,13 @@ async function run() {
    res.send(result)
   })
 
-  app.get('/applications', async (req, res) => {
+  app.get('/applications', verifyToken, verifyAdmin, async (req, res) => {
    const cursor = applications.find()
    const result = await cursor.toArray()
    res.send(result)
   })
 
-  app.delete('/applications/:id', async (req, res) => {
+  app.delete('/applications/:id', verifyToken, verifyAdmin, async (req, res) => {
    const id = req.params.id
    const query = { _id: new ObjectId(id) }
    const result = await applications.deleteOne(query)
@@ -404,7 +409,7 @@ async function run() {
    res.send(result)
   })
 
-  app.get('/admin-stats', async (req, res) => {
+  app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
    try {
     const usersCount = await users.estimatedDocumentCount();
     const packagesCount = await packages.estimatedDocumentCount();
@@ -468,8 +473,8 @@ async function run() {
    res.send(result)
   })
   // Send a ping to confirm a successful connection
-  await client.db("admin").command({ ping: 1 });
-  console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  // await client.db("admin").command({ ping: 1 });
+  // console.log("Pinged your deployment. You successfully connected to MongoDB!");
  } finally {
   // Ensures that the client will close when you finish/error
   // await client.close();
