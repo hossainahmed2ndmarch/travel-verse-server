@@ -384,9 +384,9 @@ async function run() {
   });
 
   // Make admin
-  app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
-   const id = req.params.id
-   const filter = { _id: new ObjectId(id) }
+  app.patch('/users/admin/:email', verifyToken, verifyAdmin, async (req, res) => {
+   const email = req.params.email
+   const filter = { email: email }
    const updatedDoc = {
     $set: {
      role: 'admin'
