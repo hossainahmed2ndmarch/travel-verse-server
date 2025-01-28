@@ -90,6 +90,12 @@ async function run() {
   })
 
   // Packages API
+  app.post('/packages', async (req, res) => {
+   const package = req.body
+   console.log(package);
+   const result = await packages.insertOne(package)
+   res.send(result)
+  })
   app.get('/packages-home', async (req, res) => {
    const cursor = packages.aggregate([{ $sample: { size: 3 } }])
    const result = await cursor.toArray()
