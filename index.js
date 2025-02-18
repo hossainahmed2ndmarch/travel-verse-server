@@ -97,11 +97,13 @@ async function run() {
    res.send(result)
   })
 
-  app.get('/packages', async (req, res) => {
-   const cursor = packages.find()
-   const result = await cursor.toArray()
-   res.send(result)
-  })
+  app.get("/packages", async (req, res) => {
+   const sortOrder = req.query.sortOrder === "desc" ? -1 : 1; // Default: Ascending
+   const result = await packages.find().sort({ price: sortOrder }).toArray();
+   res.send(result);
+ });
+ 
+ 
 
   app.get('/packages/:id', async (req, res) => {
    const id = req.params.id
