@@ -411,7 +411,7 @@ async function run() {
    res.send(result)
   })
 
-  app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
+  app.get('/admin-stats',  async (req, res) => {
    try {
     const usersCount = await users.estimatedDocumentCount();
     const packagesCount = await packages.estimatedDocumentCount();
@@ -420,39 +420,56 @@ async function run() {
     const storiesCount = await stories.estimatedDocumentCount();
     const applicationsCount = await applications.estimatedDocumentCount();
 
-    // Ensure the `price` field exists in the payments collection
-    const result = await payments.aggregate([
-     {
-      $addFields: {
-       numericPrice: { $toDouble: "$price" }, // Converts `price` to a number
+    // Aggregate revenue over time by month
+    const revenueTrend = await payments.aggregate([
+      {
+        $addFields: {
+          month: { $month: { $toDate: "$date" } },  // Extract month from date
+          year: { $year: { $toDate: "$date" } },    // Extract year from date
+          numericPrice: { $toDouble: "$price" }     // Ensure price is numeric
+        }
       },
-     },
-     {
-      $group: {
-       _id: null,
-       totalRevenue: {
-        $sum: { $ifNull: ["$numericPrice", 0] }, // Aggregate numeric values
-       },
+      {
+        $group: {
+          _id: { year: "$year", month: "$month" },
+          totalRevenue: { $sum: "$numericPrice" }
+        }
       },
-     },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 }  // Sort by year and month
+      }
     ]).toArray();
 
-    const totalRevenue = result.length > 0 ? result[0].totalRevenue : 0;
+    const totalRevenue = await payments.aggregate([
+      {
+        $addFields: {
+          numericPrice: { $toDouble: "$price" },
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$numericPrice" },
+        }
+      }
+    ]).toArray();
 
     res.send({
-     users: usersCount,
-     packages: packagesCount,
-     guides: guidesCount,
-     bookings: bookingsCount,
-     stories: storiesCount,
-     applications: applicationsCount,
-     revenue: totalRevenue,
+      users: usersCount,
+      packages: packagesCount,
+      guides: guidesCount,
+      bookings: bookingsCount,
+      stories: storiesCount,
+      applications: applicationsCount,
+      revenue: totalRevenue.length > 0 ? totalRevenue[0].totalRevenue : 0,
+      revenueTrend,  // Send monthly revenue data
     });
    } catch (error) {
     console.error("Error in /admin-stats API:", error);
     res.status(500).send({ message: "An error occurred while fetching stats", error });
    }
-  });
+});
+
 
   app.get("/user-statistics/:email", async (req, res) => {
    try {
