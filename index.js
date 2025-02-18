@@ -101,9 +101,9 @@ async function run() {
    const sortOrder = req.query.sortOrder === "desc" ? -1 : 1; // Default: Ascending
    const result = await packages.find().sort({ price: sortOrder }).toArray();
    res.send(result);
- });
- 
- 
+  });
+
+
 
   app.get('/packages/:id', async (req, res) => {
    const id = req.params.id
@@ -453,6 +453,75 @@ async function run() {
     res.status(500).send({ message: "An error occurred while fetching stats", error });
    }
   });
+
+  app.get("/user-statistics/:email", async (req, res) => {
+   try {
+     const email = req.params.email;
+ 
+     // Fetch Payments and Calculate Monthly Spending Trends
+     const userPayments = await payments.aggregate([
+       { $match: { email } },
+       { 
+         $project: { 
+           price: { $toDouble: "$price" }, 
+           yearMonth: {
+             $dateToString: { format: "%Y-%m", date: { $toDate: "$date" } }
+           }
+         } 
+       },
+       { 
+         $group: {
+           _id: "$yearMonth",
+           totalSpent: { $sum: "$price" }
+         }
+       },
+       { $sort: { "_id": 1 } } // Sort by month (ascending order)
+     ]).toArray();
+ 
+     // Fetch All Bookings by the User
+     const userBookings = await bookings.find({ touristEmail: email }).toArray();
+ 
+     // Fetch All Stories by the User
+     const userStories = await stories.find({ storyTeller: email }).toArray();
+ 
+     // Calculate Total Amount Spent
+     const totalSpent = userPayments.reduce((sum, payment) => sum + payment.totalSpent, 0);
+ 
+     // Count Total Trips
+     const totalTrips = userBookings.length;
+ 
+     // Count Total Stories
+     const totalStories = userStories.length;
+ 
+     // Count Bookings by Status
+     const bookingStatusCounts = userBookings.reduce((acc, booking) => {
+       acc[booking.status] = (acc[booking.status] || 0) + 1;
+       return acc;
+     }, {});
+ 
+     // Get Latest Booking Details (Sorted by Date)
+     const latestBooking = userBookings.sort((a, b) => new Date(b.tourDate) - new Date(a.tourDate))[0] || null;
+ 
+     // Send API Response
+     res.send({
+       email,
+       totalTrips,
+       totalSpent,
+       totalStories,
+       bookingStatusCounts,
+       latestBooking,
+       spendingTrends: userPayments.map(payment => ({
+         month: payment._id,
+         amount: payment.totalSpent
+       }))
+     });
+ 
+   } catch (error) {
+     console.error("❌ Error fetching user statistics:", error);
+     res.status(500).send({ error: "Internal Server Error" });
+   }
+ });
+ 
 
 
   app.patch('/users/:id', verifyToken, async (req, res) => {
